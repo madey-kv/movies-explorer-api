@@ -3,20 +3,20 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
-const { celebrate, Joi } = require('celebrate');
 const bodyParser = require('body-parser');
 const { errors } = require('celebrate');
 const { NotFoundError } = require('./errors/NotFoundError');
-const { login, createUser } = require('./controllers/users');
+const authRouter = require('./routes/index');
+
 const { auth } = require('./middlewares/auth');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
 
 const app = express();
-const { PORT = 3000 } = process.env;
+const { PORT = 3000, DATA_BASE, NODE_ENV } = process.env;
 
 app.use('*', cors({
   origin: [
-    'http://localhost:3001',
+    'http://localhost:3000',
     'https://xeniama-mov.students.nomoredomains.icu/',
     'http://xeniama-mov.students.nomoredomains.icu/',
   ],
@@ -24,7 +24,7 @@ app.use('*', cors({
 
 app.use(helmet());
 
-mongoose.connect('mongodb://localhost:27017/moviesdb', {
+mongoose.connect(NODE_ENV === 'production' ? DATA_BASE : 'mongodb://localhost:27017/moviesdb', {
   useNewUrlParser: true,
 });
 
@@ -32,25 +32,15 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(requestLogger);
 
-app.use('/users', auth, require('./routes/users'));
-app.use('/movies', auth, require('./routes/movies'));
+app.use(authRouter);
 
-app.post('/signin', celebrate({
-  body: Joi.object().keys({
-    email: Joi.string().min(3).required().email(),
-    password: Joi.string().required(),
-  }),
-}), login);
+app.use(auth);
 
-app.post('/signup', celebrate({
-  body: Joi.object().keys({
-    name: Joi.string().min(2).max(30),
-    email: Joi.string().min(3).required().email(),
-    password: Joi.string().required(),
-  }),
-}), createUser);
+app.use(require('./routes/users'));
+app.use(require('./routes/movies'));
 
-app.use(auth, (req, res, next) => {
+
+app.use((req, res, next) => {
   next(new NotFoundError('Указанный маршрут не найден'));
 });
 

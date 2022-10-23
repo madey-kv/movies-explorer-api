@@ -5,11 +5,11 @@ const {
   updateUser,
 } = require('../controllers/users');
 
-usersRouter.get('/me', getUser);
+usersRouter.get('/users/me', getUser);
 
-usersRouter.patch('/me', celebrate({
+usersRouter.patch('/users/me', celebrate({
   body: Joi.object().keys({
-    name: Joi.string().min(2).max(30),
+    name: Joi.string().min(2).max(30).required(),
     email: Joi.string().required().email(),
   }),
 }), updateUser);
